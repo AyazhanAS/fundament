@@ -1,44 +1,53 @@
 import "./styles/App.css"
-import {useState} from "react";
+import {useMemo, useState} from "react";
 import PostList from "./components/PostList";
-import MyButton from "./UI/buttons/MyButton";
-import MyInput from "./UI/inputs/MyInput";
 import PostForm from "./components/PostForm";
+import MySelect from "./UI/select/MySelect";
+import MyInput from "./UI/inputs/MyInput";
+import PostFilter from "./UI/select/PostFilter";
+import MyModal from "./UI/modal/MyModal";
+import MyButton from "./UI/buttons/MyButton";
+import { usePosts } from "./hooks/usePost";
 function App() {
-    const [posts, setPosts] = useState([
-        {id:1, title:"JS", body:"description_one"},
-        {id:2, title:"PHP", body:"description_two"},
-    ]
-    )
+    const [posts, setPosts] = useState([])
+
+    const [filter, setFilter] = useState({sort:"", query:""})
+
+    const [visible, setVisible] = useState(false)
 
     const createPost = (newPost)=>{
         setPosts([...posts, newPost])
+        setVisible(false)
     }
     
+  
    
     const removePost = (post)=>{
         setPosts(posts.filter(p=>p.id!==post.id))
     }
     
+   
 
+   const sortedAndSearchedPosts = usePosts(posts, filter.sort, filter.query)
 
+    const openModal = ()=>{
+        setVisible(true)
+
+    }
 
 
   return (
       <div className="App">
-         <PostForm create={createPost}/>
+          <MyButton style={{marginTop:"30px"}} onClick={openModal}>Add element</MyButton>
+          <MyModal visible={visible} setVisible={setVisible}>
+            <PostForm create={createPost}/>
+          </MyModal>
+        
          <hr style={{margin:"15px 0"}}/>
          <div>
-             <select>
-                 <option value="value1">По названию</option>
-                 <option value="value1">По описанию</option>
-             </select>
+          <PostFilter filter={filter} setFilter={setFilter}/>
          </div>
-         {
-             posts.length!==0
-             ?<PostList remove = {removePost} posts = {posts} name = "Название поста"/>
-            :<h1 style={{textAlign:"center"}}>POST DO NOT FIND</h1>
-         }
+            <PostList remove = {removePost} posts = {sortedAndSearchedPosts} name = "Название поста"/>
         
 
 
