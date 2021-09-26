@@ -1,5 +1,5 @@
 import "../styles/App.css"
-import {useEffect, useMemo, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import PostList from "../components/PostList";
 import PostForm from "../components/PostForm";
 import PostFilter from "../UI/select/PostFilter";
@@ -12,7 +12,17 @@ import Loader from "../UI/loader/Loader";
 import { useFetching } from "../hooks/useFetching";
 import { getPageCount} from "../utils/pages";
 import Pagination from "../UI/pagination/Pagination";
+import { useObserver } from "../hooks/useObserver";
+import MySelect from "../UI/select/MySelect";
 function Post() {
+    const [fetchPosts, isPostLoading, postError] = useFetching(async()=>{
+        const response = await PostService.getAll(limit, page)
+        setPosts([...posts, ...response.data])
+        const totalCount = response.headers["x-total-count"]
+        setTotalPages(getPageCount(totalCount, limit))
+
+    })
+
     const [posts, setPosts] = useState([])
 
     const [filter, setFilter] = useState({sort:"", query:""})
@@ -25,24 +35,21 @@ function Post() {
     const [limit, setLimit] = useState(6)
     const [page, setPage] = useState(1)
 
+    const lastElement = useRef()
+
+   useObserver(lastElement, page < totalPages, isPostLoading,()=>{
+       setPage(page+1)
+   })
+
     const changePage = (page)=>{
         setPage(page)
     }
-
+    
+  
 
     useEffect(()=>{
-        fetchPosts()
-    }, [page])
-
-    const [fetchPosts, isPostLoading, postError] = useFetching(async()=>{
-        const response = await PostService.getAll(limit, page)
-        setPosts(response.data)
-        const totalCount = response.headers["x-total-count"]
-        setTotalPages(getPageCount(totalCount, limit))
-
-    })
-
-    console.log(totalPages);
+        fetchPosts(limit, page)
+    }, [page, limit])
 
     const createPost = (newPost)=>{
         setPosts([...posts, newPost])
@@ -64,9 +71,6 @@ function Post() {
 
     }
 
-
-   
-
   return (
       <div className="App">
           <MyButton style={{marginTop:"30px"}} onClick={openModal}>Add element</MyButton>
@@ -78,19 +82,34 @@ function Post() {
          <div>
           <PostFilter filter={filter} setFilter={setFilter}/>
          </div>
+         <MySelect
+         value={limit}
+         onChange={value=>setLimit(value)}
+        defaultValue="Количество элементов на странице"
+        options={
+            [
+                {value:5, name: "5"},
+                {value:10, name:"10"},
+                {value:15, name:"15"},
+                {value:-1, name:"ALL"},
+            ]
+        }
+         >
+             
+             
+         </MySelect>
          {
              postError&&
-             <h1>Прщйзошла ошибка {postError}</h1>
+             <h1>Прoизошла ошибка {postError}</h1>
          }
-         {isPostLoading
-         ?<div style={{display:"flex", justifyContent:"center", marginTop:"50px"}}><Loader/></div>
-         :<PostList remove = {removePost} posts = {sortedAndSearchedPosts} name = "Название поста"/>
+          <PostList remove = {removePost} posts = {sortedAndSearchedPosts} name = "Название поста"/>
+          <div ref={lastElement} style={{height:"20px", background:"red"}}/>
+         {isPostLoading &&
+         <div style={{display:"flex", justifyContent:"center", marginTop:"50px"}}><Loader/></div>
+        
          }
          
              <Pagination totalPages={totalPages} page={page} changePage={changePage}/>
-            
-        
-
 
       </div>
 
